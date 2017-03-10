@@ -1,0 +1,70 @@
+#!/bin/sh
+
+TEMPDIR="/tmp/"
+
+print_help() {
+#	echo "This is the help"
+	echo "Usage:"
+	echo "encodeCameraVideoz <path/to/files/to/encode>"
+}
+
+
+encode() {
+#nicecmd="nice -n 0"
+
+rm divx2pass.log 
+fname=`echo $1| cut  -f 1 -d "."`
+
+echo -ne "\033]0;MEncoder: $2 - Dumping audio\007";
+$nicecmd mplayer $1 -vo dummy -ao pcm:file=$TEMPDIR/temp.wav -vc null
+
+echo -ne "\033]0;Normalize: $2\007";
+$nicecmd normalize $TEMPDIR/temp.wav
+
+echo -ne "\033]0;lame: $2 - Encoding audio\007";
+$nicecmd lame  -q 0 --abr 128 $TEMPDIR/temp.wav
+
+echo -ne "\033]0;MEncoder: $2 - Pass 1\007";
+$nicecmd mencoder $1 -demuxer mov  -ovc xvid -xvidencopts threads=2:pass=1:max_bframes=2:chroma_opt:vhq=1:bvhq=1:qpel -oac pcm -o /dev/null
+
+echo -ne "\033]0;MEncoder: $2 - Pass 2\007";
+$nicecmd mencoder $1 -demuxer mov  -ovc xvid -xvidencopts threads=2:pass=2:max_bframes=2:chroma_opt:vhq=1:bvhq=1:qpel:bitrate=4500 -oac copy -audiofile $TEMPDIR/temp.wav.mp3 -o $fname.avi
+
+echo "rm \"$1\"" >> toRemove 
+}
+
+
+main() {
+	rm toRemove
+	if [ $# -ne 1 ]; then
+		print_help;	
+		return -1;
+	fi
+	echo "Start encoding in $1";
+	echo "Targets: ";
+	listOfFiles=`find $1 | grep .MOV`;
+	numberOfJobs=0;
+	# count and print out jobs 
+	for file in $listOfFiles; do
+		numberOfJobs=`expr $numberOfJobs + 1`;
+		size=`ls -lh $file | cut -f 5 --delimiter=" "`;
+		echo "$file ... $size";
+	done
+	i=0;
+	echo "Ready?";
+	read key;
+	#if ( $key -eq 'y' ); then
+		for actualFile in $listOfFiles; do
+			i=`expr $i + 1`;
+			echo "actualFile: $actualFile";
+			encode $actualFile $i/$numberOfJobs;
+		done
+	#fi
+}
+
+
+
+
+main $*;
+
+

@@ -1,0 +1,2 @@
+#mencoder $1 -noskip -ovc xvid -nosound -vf crop=704:560:10:8,scale=512:416 -xvidencopts max_bframes=2:chroma_opt:pass=1:vhq=1:qpel  -o /dev/null 
+mencoder $1 -noskip -ovc xvid -oac mp3lame -vf crop=704:560:10:8,scale=512:416 -xvidencopts max_bframes=2:chroma_opt:pass=2:bitrate=-1293312:vhq=1:qpel -lameopts cbr:aq=0:br=128  -o "$1.avi"

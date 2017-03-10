@@ -1,0 +1,6 @@
+#mencoder $1 -ovc lavc -lavcopts vcodec=mpeg4:vpass=1 -oac copy -o /dev/null
+#mencoder $1 -ovc lavc -lavcopts vcodec=mpeg4:trell:vpass=2:vbitrate=2500 -oac copy -o out.avi
+
+
+mencoder $1 -vf scale=720:400 -sws 9 -ovc xvid -xvidencopts threads=2:pass=1:max_bframes=2:chroma_opt:vhq=1:bvhq=1:qpel -oac copy -o /dev/null
+mencoder $1 -vf scale=720:400 -sws 9 -ovc xvid -xvidencopts threads=2:pass=2:max_bframes=2:chroma_opt:vhq=1:bvhq=1:qpel:bitrate=2500 -oac copy -o out.avi
