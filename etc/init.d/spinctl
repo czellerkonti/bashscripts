@@ -1,0 +1,71 @@
+#! /bin/sh
+# /etc/init.d/spinctl
+#
+
+# Some things that run always
+touch /var/lock/spinctl
+BIN="/usr/bin/spinctl"
+COMMAND="$BIN sda 20"
+
+check_run()
+{
+if [ `ps aux | grep "$BIN" | wc -l` -gt 1 ]
+        then
+                return 1
+        else
+                return 0
+fi
+}
+
+show_run_state()
+{
+check_run
+case "$?" in
+  0)
+        echo "spinctl is not running"
+  ;;
+  1)
+        echo "spinctl is running"
+  ;;
+esac
+}
+
+# Carry out specific functions when asked to by the system
+case "$1" in
+  start)
+        check_run
+        case "$?" in
+        1)
+                echo spinctl is already running
+        ;;
+        0)
+                echo Starting...
+                $COMMAND
+                show_run_state
+        ;;
+        esac
+    ;;
+  stop)
+        check_run
+        case "$?" in
+        0)
+                show_run_state
+                return
+        ;;
+        1)
+                echo Stopping...
+                pkill spinctl
+                show_run_state
+        ;;
+        esac
+    ;;
+  status)
+        show_run_state
+  ;;
+  *)
+    echo "Usage: /etc/init.d/spinctl {start|stop|status}"
+    exit 1
+    ;;
+esac
+
+exit 0

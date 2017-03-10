@@ -1,0 +1,28 @@
+#!/bin/bash
+
+oldstate=''
+n="$2"
+target="/var/log/spin.log"
+spinning="0"
+#echo "" > $target
+while :; do
+        sleep 60
+        newstate=$(grep "$1" /proc/diskstats)
+        if [ "$newstate" = "$oldstate" ]; then
+                n=$(($n - 1))
+                if [ "$n" == 0 ]; then
+                        hdparm --prefer-ata12 -y /dev/"$1"
+                        logger "hdd_ctl: spindown"
+                        echo `date` hdd_crl:spindown >> $target
+                        spinning="0"
+                fi
+        else
+                if [ "$spinning" == 0 ]; then
+                        logger "hdd_ctl: spinup"
+                        echo `date` hdd_crl:spinup >> $target
+                        spinning="1";
+                fi
+                n="$2"
+                oldstate=$newstate
+        fi
+done&
