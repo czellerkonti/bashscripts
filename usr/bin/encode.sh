@@ -1,19 +1,26 @@
 #!/bin/bash
 
 # logs the process here
-LOGFILE=./actual.txt
-TEMPFILE=./temp.mp4
-TASK_LIST=./list.txt
+LOGFILE=/mnt/data/actual.txt
+TEMPFILE=/mnt/data/temp.mp4
+TASK_LIST=/mnt/data/list.txt
 SEARCHDIR="$1"
 EXTENSIONS=".*\.\(avi\|mpg\|mp4\|mov\)$"
+FFMPEG=avconv
 
-X264_POST=_x264
-X265_POST=_x265
-PROCESS_MARKERS="enc $X264_POST $X265_POST"
-X264_ENCODE_OPTIONS="-c:v libx264 -preset veryslow -crf 20 -tune film -c:a aac -strict experimental -ab 128k -movflags faststart"
-X265_ENCODE_OPTIONS="-c:v libx265 -preset slow -crf 20 -c:a aac -strict experimental -ab 128k -movflags faststart"
 SUBDIR=encode
 LOG_DATE_FORMAT="+%Y-%m-%d_%H:%M:%S"
+
+declare -A CODECS
+CODECS["mp3"]="-c:v copy -c:a libmp3lame -q:a 5"
+CODECS["x264"]="-c:v libx264 -preset veryslow -crf 20 -tune film -c:a aac -strict experimental -ab 128k -movflags faststart"
+CODECS["x265"]="-c:v libx265 -preset slow -crf 20 -c:a aac -strict experimental -ab 128k -movflags faststart"
+declare -A POSTS
+POSTS["mp3"]="_mp3"
+POSTS["x264"]="_x264"
+POSTS["x265"]="_x265"
+PROCESS_MARKERS="enc ${!POSTS[@]}"
+
 
 rm -f $LOGFILE
 rm -f $TEMPFILE
@@ -29,28 +36,22 @@ if [ -f "$3" ]; then
 	echo "$3" has been already transcoded >> $LOGFILE
 	return
 fi
-case "$1" in
-	$X264_POST)
-		ENCODE_OPTIONS=$X264_ENCODE_OPTIONS
-	;;
-	$X265_POST)
-		ENCODE_OPTIONS=$X265_ENCODE_OPTIONS
-	;;
-*)
-	  echo "Unknown codec: "$1
-	  echo "Unknown codec: "$1 >> $LOGFILE
+
+ENCODE_OPTIONS=${CODECS[$1]}
+
+if [ -z "$ENCODE_OPTIONS" ]; then
+	echo Unknown codec $1 | tee -a $LOGFILE
 	exit -1
-esac
+fi
+
 echo  `date $LOG_DATE_FORMAT` Transcoding $2 - $1 >> $LOGFILE
-FFMPEG="ffmpeg -y -i"
-COMMAND="$FFMPEG \"$2\" $ENCODE_OPTIONS $TEMPFILE"
+COMMAND="$FFMPEG -y -i \"$2\" $ENCODE_OPTIONS $TEMPFILE"
 echo $COMMAND
 sh -c $COMMAND
 
 local ret=$?
 if [ $ret -ne 0 ];then
-	echo failed
-	echo failed >> $LOGFILE
+	echo failed | tee -a $LOGFILE
 	return $ret
 fi
 }
@@ -106,30 +107,31 @@ done
 
 # print/write out the found videos
 IFS=$NIOFS
-for t in ${FILES[*]}
+for t in "${FILES[@]}"
 do
 	echo $t | tee -a $TASK_LIST
 done
 read -n1 -r -p "Press a key to continue..." key
 
 # prepare the output filenames and start the encoding 
-for POST in $X264_POST $X265_POST
+for CODEC in "${!CODECS[@]}" 
 do
-	for v in ${FILES[*]}
+	POST=${POSTS[$CODEC]}
+	for v in "${FILES[@]}"
 	do
 		videofile="$v"
 		fname=`basename $videofile .mp4`
 		targetdir=`dirname $videofile`/$SUBDIR
 #		targetdir=/mnt/data/tmp
 		targetfile=$targetdir/$fname$POST".mp4"
- 		encode $POST $videofile $targetfile
+ 		encode $CODEC $videofile $targetfile
 		ret=$?
 		if [ ! $ret -ne 0 ]; then
 			move_temp $targetfile
 			touch -r $videofile "$targetfile"
 			echo "done" >> "$LOGFILE"
 		else
-			echo "failed" >> "$LOGFILE"
+			echo "failed to move" >> "$LOGFILE"
 fi
 	done
 done
