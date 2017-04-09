@@ -105,10 +105,10 @@ done
 #( set -o posix ; set ) | grep FILES
 
 # print/write out the found videos
-IFS=$NOFS
+IFS=$NIOFS
 for t in ${FILES[*]}
 do
-	echo $t | tee $TASK_LIST
+	echo $t | tee -a $TASK_LIST
 done
 read -n1 -r -p "Press a key to continue..." key
 
