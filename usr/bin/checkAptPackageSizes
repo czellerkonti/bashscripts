@@ -1,0 +1,1 @@
+dpkg-query -Wf '${Status}\t${Installed-size}\t${Package}\n' |grep ^install|cut -dd -f2-|column -t|sort -n
