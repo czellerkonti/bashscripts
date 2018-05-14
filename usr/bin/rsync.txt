@@ -1,0 +1,1 @@
+ rsync -avzh --delete --progress root@192.168.11.3:/mnt/data/temp ./
